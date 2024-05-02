@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "dockerode": "^4.0.2",
+    "expres": "^0.0.5",
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  }
+}
