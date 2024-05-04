@@ -3,5 +3,5 @@
     "port":"3000",
     "log_file":"./tmp/log_time.log",
     "runtime":"build",
-    "panel_url":"http://localhost:8080"
+    "panel_url":"http://localhost:3001"
 }

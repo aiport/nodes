@@ -106,7 +106,7 @@ ws.on('connection', (socket) => {
         }
     });
 });
-const port = 3000;
+const port = config.port | 3000;
     setTimeout(function (){
         server.listen(port, () => {
           console.log(`Server started on http://localhost:${port}`);
