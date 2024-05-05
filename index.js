@@ -42,6 +42,7 @@ if(!config.runtime == "build"){
         process.exit(1);
     });
 }
+app.use('/server', deploymentRouter);
 ws.on('connection', (socket) => {
     console.log('Client connected ');
     socket.on('message', (message) => {
