@@ -10,6 +10,7 @@ const Docker = require('dockerode');
 const chalk = require('chalk');
 process.env.dockerSocket = process.platform === "win32" ? "//./pipe/docker_engine" : "/var/run/docker.sock";
 const docker = new Docker({ socketPath: process.env.dockerSocket });
+const deploymentRouter = require('./router/routes/serverDockerFunctions');
 let consolelogo;
 if(config.runtime == "build"){
     consolelogo= fs.readFileSync('./assets/logo-build.txt', 'utf8');
