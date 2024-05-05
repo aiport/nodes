@@ -2,6 +2,6 @@
     "secret_key":"default_key",
     "port":"3000",
     "log_file":"./tmp/log_time.log",
-    "runtime":"build",
+    "runtime":"profuction",
     "panel_url":"http://localhost:3001"
 }
