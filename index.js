@@ -8,6 +8,9 @@ const ws = new wss.Server({ server });
 const fs = require('fs');
 const Docker = require('dockerode');
 const chalk = require('chalk');
+const deploy = require('./router/routes/serverDockerFunctions')
+const info = require('./router/routes/serverInfoFunctions')
+const power = require('./router/routes/serverPowerFunctions')
 process.env.dockerSocket = process.platform === "win32" ? "//./pipe/docker_engine" : "/var/run/docker.sock";
 const docker = new Docker({ socketPath: process.env.dockerSocket });
 let consolelogo;
@@ -17,6 +20,7 @@ if(config.runtime == "build"){
     consolelogo= fs.readFileSync('./assets/logo-console.txt', 'utf8');
 
 }
+
 let isAuthenticated = false;
 if(config.runtime == "build"){
     console.log(chalk.red(consolelogo));
@@ -41,7 +45,9 @@ if(!config.runtime == "build"){
         process.exit(1);
     });
 }
-
+app.use('/server', deploy);
+app.use('/server', info);
+app.use('/server', power);
 ws.on('connection', (socket) => {
     console.log('Client connected ');
     socket.on('message', (message) => {
