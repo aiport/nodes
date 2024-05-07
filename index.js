@@ -11,7 +11,6 @@ const chalk = require('chalk');
 const deploy = require('./router/routes/serverDockerFunctions')
 const info = require('./router/routes/serverInfoFunctions')
 const power = require('./router/routes/serverPowerFunctions')
-const file = require('./router/routes/serverFileFunctions')
 process.env.dockerSocket = process.platform === "win32" ? "//./pipe/docker_engine" : "/var/run/docker.sock";
 const docker = new Docker({ socketPath: process.env.dockerSocket });
 let consolelogo;
@@ -49,7 +48,6 @@ if(!config.runtime == "build"){
 app.use('/server', deploy);
 app.use('/server', info);
 app.use('/server', power);
-app.use('/file', power);
 ws.on('connection', (socket) => {
     console.log('Client connected ');
     socket.on('message', (message) => {
