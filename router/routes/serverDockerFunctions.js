@@ -4,8 +4,9 @@ const chalk = require('chalk');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
-const config = require('../config.json');
+const config = require('../../config.json');
 const os = require('os');
+const db = require('../../runners/db');
 process.env.dockerSocket = process.platform === "win32" ? "//./pipe/docker_engine" : "/var/run/docker.sock";
 const docker = new Docker({ socketPath: process.env.dockerSocket });
 docker.ping().then(() => {
@@ -16,49 +17,69 @@ docker.ping().then(() => {
 
 router.post('/api/create', async (req, res) => {
     console.log(chalk.bold.green('A new container creation request has been received! \n Checking if request is authorized...'));
-    const headers = req.headers;
-    if(!headers.authorization) return res.status(401).json({ error: 'Unauthorized' });
-    if(headers.authorization !== `Bearer ${config.secret_key}`) return res.status(401).json({ error: 'Unauthorized' });
-    //calculate disk space
-    const {image, cmd,env,ports,memory,cpu,portbindings,configfilepath,configfilecontent} = req.body;
+    if(!req.headers.authorization) return res.status(401).json({ error: 'Unauthorized' });
+    if(req.headers.authorization !== `Bearer ${config.secret_key}`) return res.status(401).json({ error: 'Wrong Key' });
+    const Image = req.headers.image;
+    const ports = req.headers.ports;
+    const Cmd = req.headers.cmd;
+    const Env = req.headers.env;
+    const Memory = req.headers.memory;
+    const Cpu = req.headers.cpu;
     try{
         console.log(chalk.bold.green('Request is authorized! \n Creating container...'));
-        await docker.pull(image); // docker will pull image if it did not existed in system or was not installed by the installer for some reasons...
+        docker.pull(Image);
         let id = new Date().getTime().toString();
-        const path = path.join(__dirname,'../servers/volumes',id);
-        fs.mkdirSync(path, { recursive: true });
-
-        if(configfilepath && configfilecontent){
-            const filepath = path.join(path,configfilepath);
-            fs.writeFileSync(filepath,configfilecontent);
+        const paths = path.join(__dirname, '../../server', id); // Using timestamp for unique dir
+        fs.mkdirSync(paths, { recursive: true });
+        let ExposedPorts = {};
+        let PortBindings = {};
+        console.log(chalk.bold.green('Creating container...'));
+        if(ports){
+            ports.split(',').forEach(portMapping => {
+                const [containerPort, hostPort] = portMapping.split(':');
+                const key = `${containerPort}/tcp`;
+                ExposedPorts[key] = {};
+                PortBindings[key] = [{ HostPort: hostPort }];
+              });
         }
-        const options = {
-            image,
-            ExposedPorts: ports,
-            AttachStdin: true,
+        const containerOptions = {
+            Image,
+            ExposedPorts:ExposedPorts,
             AttachStdout: true,
             AttachStderr: true,
+            AttachStdin: true,
             Tty: true,
             OpenStdin: true,
             HostConfig: {
-                PortBindings: portbindings,
-                Binds: [`${path}:/app/serverdata`],
-                Memory: memory*1024*1024,
-                CpuCount: cpu
+                PortBindings:PortBindings,
+                Binds: [`${paths}:/app/data`],
+                Memory: Memory * 1024 * 1024,
+                CpuCount: parseInt(Cpu)
             }
-        }
-            if(env) options.Env = env;
-            if(cmd) options.Cmd = cmd;
+        };
 
-        const container = await docker.createContainer(options);
+        if (Cmd) containerOptions.Cmd = Cmd;
+        if (Env) containerOptions.Env = Env;
+        const container = await docker.createContainer(containerOptions);
         console.log(chalk.bold.green('Container created successfully! \n Starting container...'));
         await container.start();
         console.log(chalk.bold.green('Container started successfully!'));
-        res.status(200).json({containerId: container.id, message: 'Container created successfully',id});
-
+        const data={
+            containerId: container.id,
+            message: 'Container created successfully',
+            image: Image,
+            ports: ports,
+            cmd: Cmd | undefined,
+            env: Env | undefined,
+            memory: Memory,
+            cpu: Cpu,
+            containerOptions: containerOptions
+        }
+        res.status(200).json({containerId: container.id, message: 'Container created successfully'});
         }catch(err){
+            console.log(err)
             console.log(chalk.bold.red(`Error creating container: ${err}`));
-            res.status(500).json({error: err.message});
+            res.status(500).json({error: err});
         }
 });
 
@@ -73,14 +94,19 @@ router.delete('/api/delete/:id', async (req, res) => {
         console.log(chalk.bold.green(`Deleting container ${id}...`));
         const container = docker.getContainer(id);
         console.log(chalk.bold.green(`Stopping container ${id}...`));
-        await container.stop();
-        console.log(chalk.bold.green(`Container ${id} stopped successfully!`));
+        try{
+            await container.stop();
+            console.log(chalk.bold.green(`Container ${id} stopped successfully!`));
+        }catch{
+            console.log(chalk.bold.red(`Error stopping container ${id}`));
+        }
         await container.remove();
         console.log(chalk.bold.green(`Container ${id} deleted successfully!`));
+        db.db.get('containers').remove({containerId: id});
         res.status(200).json({message: `Container ${id} deleted successfully!`});
     }catch(err){
         console.log(chalk.bold.red(`Error deleting container: ${err}`));
-        res.status(500).json({error: err.message});
+        res.status(500).json({error: err});
     }
 });
 
