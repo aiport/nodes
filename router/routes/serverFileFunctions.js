@@ -12,7 +12,10 @@ function isSafePath(base, target) {
     }
     return fullPath;
 }
-
+function isEditable(file) {
+    const editableExtensions = ['.txt', '.json', '.js', '.html', '.css', '.md','.py'];
+    return editableExtensions.includes(path.extname(file).toLowerCase());
+}
 router.get('/:id/files', async (req, res) => {
     const auth = req.headers.authorization;
     if(!auth == `Bearer ${config.secret_key}`) return res.status(401).json({ message: `Unauthorized`})
@@ -23,7 +26,7 @@ router.get('/:id/files', async (req, res) => {
     if (!id) return res.status(400).json({ message: 'No volume ID' });
 
     try {
-        const fullPath = isSafePath(volumePath, subPath);
+        const fullPath = isisSafePath(volumePath, subPath);
         const files = await fs.readdir(fullPath, { withFileTypes: true });
         const detailedFiles = files.map(file => ({
             name: file.name,
@@ -58,7 +61,8 @@ router.get('/:id/files/view/:filename', async (req, res) => {
     }
 
     try {
-        const filePath = safePath(volumePath, formattedPath);
+        const filePath = isSafePath(volumePath, formattedPath);
+        
         if (!isEditable(filePath)) {
             return res.status(400).json({ message: 'File type not supported for viewing' });
         }
@@ -77,7 +81,7 @@ router.post('/:id/files/upload', upload.array('files'), async (req, res) => {
     const subPath = req.query.path || '';
 
     try {
-        const fullPath = safePath(volumePath, subPath);
+        const fullPath = isSafePath(volumePath, subPath);
 
         await Promise.all(req.files.map(file => {
             const destPath = path.join(fullPath, file.originalname);
@@ -108,7 +112,7 @@ router.post('api/:id/files/edit/:filename', async (req, res) => {
     }
     
     try {
-        const filePath = safePath(volumePath, formattedPath);
+        const filePath = isSafePath(volumePath, formattedPath);
         if (!isEditable(filePath)) {
             return res.status(400).json({ message: 'File type not supported for editing' });
         }
@@ -129,7 +133,7 @@ router.post('api/:id/files/create/:filename', async (req, res) => {
 
     try {
         // Ensure the path is safe and resolve it to an absolute path
-        const fullPath = safePath(path.join(volumePath, subPath), filename);
+        const fullPath = isSafePath(path.join(volumePath, subPath), filename);
 
         // Write the content to the new file
         await fs.writeFile(fullPath, content);
@@ -152,7 +156,7 @@ router.post('api/:id/folders/create/:foldername', async (req, res) => {
     const subPath = req.query.path || '';
 
     try {
-        const fullPath = safePath(volumePath, subPath);
+        const fullPath = isSafePath(volumePath, subPath);
         const targetFolderPath = path.join(fullPath, foldername);
         await fs.mkdir(targetFolderPath, { recursive: true });
         res.json({ message: 'Folder created successfully' });
@@ -171,7 +175,7 @@ router.delete('/api/:id/files/delete', async (req, res) => {
     const volumePath = path.join(__dirname, '../../server/', id);
     
     try {
-        const filePath = safePath(volumePath, filename);
+        const filePath = isSafePath(volumePath, filename);
         await fs.unlink(filePath);
         res.json({ message: 'File deleted successfully' });
     } catch (err) {
