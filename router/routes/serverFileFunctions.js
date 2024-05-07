@@ -26,7 +26,7 @@ router.get('/:id/files', async (req, res) => {
     if (!id) return res.status(400).json({ message: 'No volume ID' });
 
     try {
-        const fullPath = isisSafePath(volumePath, subPath);
+        const fullPath = isSafePath(volumePath, subPath);
         const files = await fs.readdir(fullPath, { withFileTypes: true });
         const detailedFiles = files.map(file => ({
             name: file.name,
