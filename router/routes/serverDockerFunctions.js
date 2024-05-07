@@ -52,7 +52,7 @@ router.post('/api/create', async (req, res) => {
             OpenStdin: true,
             HostConfig: {
                 PortBindings:PortBindings,
-                Binds: [`${paths}:/app/data`],
+                Binds: [`${paths}:/serverdata`],
                 Memory: Memory * 1024 * 1024,
                 CpuCount: parseInt(Cpu)
             }
@@ -111,4 +111,3 @@ router.delete('/api/delete/:id', async (req, res) => {
 });
 
 module.exports = router;
-
