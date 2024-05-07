@@ -67,7 +67,13 @@ async function installer() {
                     }
 
                     function onProgress(event) {
-                       console.log(event);
+                        let progress = event.progress || "";
+                        if(progress == ""){
+                        console.log(event.status);
+                        }else{
+                            
+                        console.log(event.status + ": " + progress);
+                        }
                     }
                 });
             } catch (err) {
