@@ -45,6 +45,9 @@ if(!config.runtime == "build"){
         process.exit(1);
     });
 }
+app.get('/ping', (req, res) => {
+    res.send('pong');
+});
 app.use('/server', deploy);
 app.use('/server', info);
 app.use('/server', power);
