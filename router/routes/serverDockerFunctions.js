@@ -7,6 +7,7 @@ const router = express.Router();
 const config = require('../../config.json');
 const os = require('os');
 const db = require('../../runners/db');
+const e = require('express');
 process.env.dockerSocket = process.platform === "win32" ? "//./pipe/docker_engine" : "/var/run/docker.sock";
 const docker = new Docker({ socketPath: process.env.dockerSocket });
 docker.ping().then(() => {
@@ -27,8 +28,18 @@ router.post('/api/create', async (req, res) => {
     const Cpu = req.headers.cpu;
     try{
         console.log(chalk.bold.green('Request is authorized! \n Creating container...'));
-        await docker.pull(Image);
-        let id = new Date().getTime().toString();
+        await docker.pull(Image, (err, stream) => {
+            if (err) {
+                console.error(chalk.bold.red(`Error pulling image ${Image}: ${err}`));
+                return;
+            }
+            docker.modem.followProgress(stream, onFinished, onProgress);
+            async function onFinished(err, output) {
+                if (err) {
+                    console.error(chalk.bold.red(`Error pulling image ${Image}: ${err}`));
+                } else {
+                    console.log(chalk.bold.green(`Image ${Image} installed successfully!`));
+                            let id = new Date().getTime().toString();
         const paths = path.join(__dirname, '../../server', id); // Using timestamp for unique dir
         fs.mkdirSync(paths, { recursive: true });
         let ExposedPorts = {};
@@ -75,7 +86,19 @@ router.post('/api/create', async (req, res) => {
             cpu: Cpu,
             containerOptions: containerOptions
         }
-        res.status(200).json({containerId: container.id, message: 'Container created successfully'});
+        res.status(200).json({containerId: container.id, message: 'Container created successfully', fileId: id});1
+                }
+            }
+            function onProgress(event) {
+                let progress = event.progress || "";
+                if(progress == ""){
+                console.log(event.status);
+                }else{
+                    
+                console.log(event.status + ": " + progress);
+                }
+            }
+        });
         }catch(err){
             console.log(err)
             console.log(chalk.bold.red(`Error creating container: ${err}`));
@@ -111,3 +134,4 @@ router.delete('/api/delete/:id', async (req, res) => {
 });
 
 module.exports = router;
+
