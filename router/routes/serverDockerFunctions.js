@@ -27,7 +27,7 @@ router.post('/api/create', async (req, res) => {
     const Cpu = req.headers.cpu;
     try{
         console.log(chalk.bold.green('Request is authorized! \n Creating container...'));
-        docker.pull(Image);
+        await docker.pull(Image);
         let id = new Date().getTime().toString();
         const paths = path.join(__dirname, '../../server', id); // Using timestamp for unique dir
         fs.mkdirSync(paths, { recursive: true });
